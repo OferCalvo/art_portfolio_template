@@ -8,7 +8,24 @@
   const slidesEl = document.getElementById('slides');
   const captionEl = document.getElementById('ticket');
   const titleEl = document.getElementById('slide-title');
+  const loadingIndicator = document.getElementById('loadingIndicator');
   if (!carousel || !slidesEl) return;
+
+  // Track loading state
+  let loadingCount = 0;
+
+  function showLoading() {
+    loadingCount++;
+    loadingIndicator.classList.add('show');
+  }
+
+  function hideLoading() {
+    loadingCount--;
+    if (loadingCount <= 0) {
+      loadingCount = 0;
+      loadingIndicator.classList.remove('show');
+    }
+  }
 
   let current = 0;
   const prevBtn = document.getElementById('prev');
@@ -72,10 +89,22 @@
     slidesEl.innerHTML = '';
     const base = document.baseURI;
     const created = [];
-    const promises = ITEMS.map(it => createSlideForItem(it, base)
-      .then(s => created.push(s))
-      .catch(err => { console.warn('Failed to load', err.src); if (err.slide && err.slide.parentNode) err.slide.parentNode.removeChild(err.slide); }));
+    
+    // Reset loading count at start of populating slides
+    loadingCount = 0;
+    showLoading();
 
+    const promises = ITEMS.map(it => createSlideForItem(it, base)
+      .then(s => {
+        created.push(s);
+        return s;
+      })
+      .catch(err => { 
+        console.warn('Failed to load', err.src); 
+        if (err.slide && err.slide.parentNode) err.slide.parentNode.removeChild(err.slide);
+      }));
+
+    // Wait for all slides to be created and loaded
     await Promise.all(promises);
 
     // if nothing succeeded, try a simple fallback (first item) so UI shows something
@@ -84,6 +113,9 @@
         await createSlideForItem(ITEMS[0], base);
       } catch (_) { /* ignore */ }
     }
+
+    // Ensure loading indicator is hidden after all slides are processed
+    hideLoading();
 
     // set slide widths and heights after load attempts
     computeAndSetCarouselHeight();
