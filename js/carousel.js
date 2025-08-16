@@ -201,19 +201,14 @@
     const deltaX = touch.clientX - touchStartX;
     const deltaY = touch.clientY - touchStartY;
 
-    // Check if scrolling vertically
-    if (!isScrolling && Math.abs(deltaY) > SCROLL_TOLERANCE && Math.abs(deltaY) > Math.abs(deltaX)) {
-      isScrolling = true;
-      isDragging = false;
-      return;
-    }
+    // Only handle horizontal swipes
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      // We only call preventDefault when we're sure it's a horizontal swipe
+      // and the event is cancelable
+      if (e.cancelable) {
+        e.preventDefault();
+      }
 
-    // If clearly horizontal movement, prevent default to enable swipe
-    if (Math.abs(deltaX) > SCROLL_TOLERANCE && Math.abs(deltaX) > Math.abs(deltaY)) {
-      e.preventDefault();
-    }
-
-    if (!isScrolling) {
       const w = carousel.clientWidth;
       const maxScroll = -(getSlides().length - 1) * w;
       
@@ -226,6 +221,10 @@
       }
       
       slidesEl.style.transform = `translateX(${newTransform}px)`;
+    } else if (!isScrolling && Math.abs(deltaY) > SCROLL_TOLERANCE) {
+      // If it's clearly a vertical scroll, mark it and stop dragging
+      isScrolling = true;
+      isDragging = false;
     }
   }
 
@@ -274,14 +273,35 @@
       if (e.key === 'ArrowRight') next();
     });
 
-    // Add touch event listeners
-    slidesEl.addEventListener('touchstart', handleTouchStart, { passive: false });
-    slidesEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+    // Add touch event listeners with proper passive settings
+    slidesEl.addEventListener('touchstart', handleTouchStart, { passive: true });
+    
+    // Use a separate listener for initial touch movement detection
+    let touchMoveInitialized = false;
+    slidesEl.addEventListener('touchmove', (e) => {
+      if (!touchMoveInitialized) {
+        const touch = e.touches[0];
+        const deltaX = Math.abs(touch.clientX - touchStartX);
+        const deltaY = Math.abs(touch.clientY - touchStartY);
+        
+        // If horizontal movement is dominant, add the non-passive listener
+        if (deltaX > deltaY && deltaX > SCROLL_TOLERANCE) {
+          touchMoveInitialized = true;
+          slidesEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+        }
+      }
+    }, { passive: true });
+
     slidesEl.addEventListener('touchend', (e) => {
       touchEndX = e.changedTouches[0].clientX;
       handleTouchEnd(e);
+      touchMoveInitialized = false; // Reset for next touch
     });
-    slidesEl.addEventListener('touchcancel', handleTouchCancel);
+    
+    slidesEl.addEventListener('touchcancel', () => {
+      handleTouchCancel();
+      touchMoveInitialized = false; // Reset for next touch
+    });
   }
 
   // compute a target carousel height so images are centered and maintain aspect ratio
