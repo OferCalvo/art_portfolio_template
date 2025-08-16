@@ -30,6 +30,16 @@
     img.loading = 'lazy';
     const url = new URL(item.image, base).href;
     img.src = url;
+    // Add click handler directly when creating the image
+    img.style.cursor = 'pointer';
+    img.addEventListener('click', () => {
+      const modal = document.getElementById('imageModal');
+      const modalImg = document.getElementById('modalImage');
+      modalImg.src = url;
+      modalImg.alt = img.alt;
+      modal.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    });
     slide.appendChild(img);
     slidesEl.appendChild(slide);
     return new Promise((resolve, reject) => {
@@ -118,7 +128,7 @@
     if (!dotsContainer) return;
     dotsContainer.innerHTML = '';
     const slides = getSlides();
-    console.log('Number of slides:', slides.length);
+
     // Reset current to 0 when creating new dots
     current = 0;
     slides.forEach((_, i) => {
@@ -216,6 +226,11 @@
       const cfg = await resp.json();
       if (!Array.isArray(cfg) || cfg.length === 0) throw new Error('Empty config');
       ITEMS = cfg;
+      // Reset current to 0 to ensure we start with the first slide
+      current = 0;
+      // Immediately update title and caption before populating slides
+      updateTitle(current);
+      updateCaption(current);
     }catch(err){
       console.error('Could not load carousel config:', err);
       ITEMS = []; // keep empty — populateSlides will do nothing
@@ -258,6 +273,28 @@
       console.warn('refreshAll failed:', err);
     }
   }
+
+  // Modal functionality
+  const modal = document.getElementById('imageModal');
+  const modalImg = document.getElementById('modalImage');
+  const closeBtn = modal.querySelector('.modal-close');
+
+  function closeModal() {
+    modal.classList.remove('show');
+    document.body.style.overflow = ''; // Restore scrolling
+    setTimeout(() => {
+      modalImg.src = ''; // Clear source after animation
+    }, 300);
+  }
+
+  // Setup modal event listeners
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', e => {
+    if (e.target === modal) closeModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal.classList.contains('show')) closeModal();
+  });
 
   // run init when DOM ready
   if (document.readyState === 'loading'){
