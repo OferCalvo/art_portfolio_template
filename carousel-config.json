@@ -1,0 +1,32 @@
+[
+  {
+    "image": "images/abstract_painting_1.png",
+    "title": "Abstract Flow I",
+    "description": "High-contrast acrylic study exploring motion and negative space."
+  },
+  {
+    "image": "images/abstract_painting_2.png",
+    "title": "Abstract Flow II",
+    "description": "Continuation of the series with layered textures and metallic ink."
+  },
+  {
+    "image": "images/abstract_painting_3.png",
+    "title": "Color Study I",
+    "description": "Small-format oil study focusing on primary color relationships."
+  },
+  {
+    "image": "images/abstract_painting_4.png",
+    "title": "Color Study II",
+    "description": "Variation on the previous study with a cooler palette."
+  },
+  {
+    "image": "images/pumpkins_art.png",
+    "title": "Pumpkins",
+    "description": "Playful still life with warm tones and loose brushwork."
+  },
+  {
+    "image": "images/mouse_cup.png",
+    "title": "Mouse & Cup",
+    "description": "Whimsical ink drawing inspired by everyday objects."
+  }
+]

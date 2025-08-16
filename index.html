@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=2" />
+  <!-- Add favicon - using emoji as a simple solution -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎨</text></svg>">
   <title>My Protfolio</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
@@ -15,11 +17,16 @@
     </div>
 
     <div class="carousel" id="carousel">
+      <div id="slide-title" class="slide-title" aria-live="polite"></div>
+
       <div class="slides" id="slides"></div>
       <button class="btn prev" id="prev" aria-label="Previous">‹</button>
       <button class="btn next" id="next" aria-label="Next">›</button>
     </div>
+
     <div class="dots" id="dots" role="tablist" aria-label="Slide navigation"></div>
+
+    <div id="ticket" class="ticket" role="region" aria-live="polite"></div>
   </div>
 
   <script src="js/carousel.js" defer></script>

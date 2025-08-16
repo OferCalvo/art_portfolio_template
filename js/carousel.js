@@ -1,18 +1,13 @@
 (function(){
   // minimal, dependency-free carousel that populates slides from images/ folder
 
-  const IMAGES = [
-    'abstract_painting_1.png',
-    'abstract_painting_2.png',
-    'abstract_painting_3.png',
-    'abstract_painting_4.png',
-    'pumpkins_art.png',
-    'mouse_cup.png'
-    // add or remove filenames (located in /images) as needed
-  ];
+  // fetch external config and populate the carousel using its items
+  let ITEMS = [];
 
   const carousel = document.getElementById('carousel');
   const slidesEl = document.getElementById('slides');
+  const captionEl = document.getElementById('ticket');
+  const titleEl = document.getElementById('slide-title');
   if (!carousel || !slidesEl) return;
 
   let current = 0;
@@ -22,22 +17,150 @@
 
   function getSlides() { return Array.from(slidesEl.children).filter(n => n.classList && n.classList.contains('slide')); }
 
-  // create a slide element and start loading the image; return a promise that settles when load/error occurs
-  function createSlideForSrc(srcUrl, altText = '') {
+  // sanitize simple text for injection
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // create slide and append immediately; return promise resolved on load or rejected on error
+  function createSlideForItem(item, base){
     const slide = document.createElement('div');
     slide.className = 'slide';
     const img = document.createElement('img');
     img.className = 'carousel-img';
-    img.alt = altText;
+    img.alt = item.title || '';
     img.loading = 'lazy';
-    img.src = srcUrl;
+    const url = new URL(item.image, base).href;
+    img.src = url;
     slide.appendChild(img);
     slidesEl.appendChild(slide);
-
     return new Promise((resolve, reject) => {
       if (img.complete && img.naturalWidth) return resolve(slide);
       img.addEventListener('load', () => resolve(slide), {once:true});
-      img.addEventListener('error', () => reject({slide, src: srcUrl}), {once:true});
+      img.addEventListener('error', () => reject({slide, src: url}), {once:true});
+    });
+  }
+
+  // update title element
+  function updateTitle(idx){
+    if (!titleEl) return;
+    const item = ITEMS[idx] || {};
+    titleEl.textContent = item.title || '';
+  }
+
+  // update ticket/caption element
+  function updateCaption(idx){
+    if (!captionEl) return;
+    const item = ITEMS[idx] || {};
+    if (!item.title && !item.description) { captionEl.innerHTML = ''; return; }
+    captionEl.innerHTML = `
+      <div class="title">${escapeHtml(item.title || '')}</div>
+      <div class="body">${escapeHtml(item.description || '')}</div>
+    `;
+  }
+
+  // populate slides from ITEMS
+  async function populateSlides(){
+    slidesEl.innerHTML = '';
+    const base = document.baseURI;
+    const created = [];
+    const promises = ITEMS.map(it => createSlideForItem(it, base)
+      .then(s => created.push(s))
+      .catch(err => { console.warn('Failed to load', err.src); if (err.slide && err.slide.parentNode) err.slide.parentNode.removeChild(err.slide); }));
+
+    await Promise.all(promises);
+
+    // if nothing succeeded, try a simple fallback (first item) so UI shows something
+    if (created.length === 0 && Array.isArray(ITEMS) && ITEMS.length > 0) {
+      try {
+        await createSlideForItem(ITEMS[0], base);
+      } catch (_) { /* ignore */ }
+    }
+
+    // set slide widths and heights after load attempts
+    computeAndSetCarouselHeight();
+    updateSlideWidths();
+
+    // always create dots from whatever slides exist
+    createDots();
+
+    // update title + caption to current
+    updateTitle(current);
+    updateCaption(current);
+
+    // re-run a short time later to catch late layout changes
+    setTimeout(()=>{ computeAndSetCarouselHeight(); updateSlideWidths(); updateTitle(current); updateCaption(current); }, 150);
+
+    // listen for late image loads to recompute
+    getSlides().forEach(slide => {
+      const img = slide.querySelector('img');
+      if (!img) return;
+      if (!img.complete) img.addEventListener('load', () => { computeAndSetCarouselHeight(); updateSlideWidths(); }, {once:true});
+    });
+  }
+
+  // modify moveTo to update title + caption on change
+  function moveTo(index, animate = true){
+    const slides = getSlides();
+    if (!slides.length) return;
+    current = Math.max(0, Math.min(index, slides.length -1));
+    const w = carousel.clientWidth || carousel.getBoundingClientRect().width;
+    if (!animate) slidesEl.style.transition = 'none';
+    slidesEl.style.transform = `translateX(-${current * w}px)`;
+    requestAnimationFrame(()=>{ if (!animate) slidesEl.style.transition = ''; });
+    updateDots();
+    updateTitle(current);
+    updateCaption(current);
+  }
+
+  function prev() { moveTo(current - 1); }
+  function next() { moveTo(current + 1); }
+
+  function createDots() {
+    if (!dotsContainer) return;
+    dotsContainer.innerHTML = '';
+    const slides = getSlides();
+    console.log('Number of slides:', slides.length);
+    // Reset current to 0 when creating new dots
+    current = 0;
+    slides.forEach((_, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'dot';
+      btn.setAttribute('data-index', String(i));
+      btn.setAttribute('aria-label', `Slide ${i+1}`);
+      btn.addEventListener('click', () => moveTo(i));
+      dotsContainer.appendChild(btn);
+      if (i === 0) btn.classList.add('active');
+    });
+    // Update dots to show first one as active
+    updateDots();
+    // Also update title and caption for first slide
+    updateTitle(current);
+    updateCaption(current);
+  }
+
+  function updateDots() {
+    if (!dotsContainer) return;
+    Array.from(dotsContainer.children).forEach((d, i) => {
+      d.classList.toggle('active', i === current);
+    });
+  }
+
+  let resizeTimer = null;
+  function onResize() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      computeAndSetCarouselHeight();
+      updateSlideWidths();
+    }, 120);
+  }
+
+  function initControls() {
+    if (prevBtn) prevBtn.addEventListener('click', prev);
+    if (nextBtn) nextBtn.addEventListener('click', next);
+    window.addEventListener('resize', onResize);
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') prev();
+      if (e.key === 'ArrowRight') next();
     });
   }
 
@@ -86,125 +209,64 @@
     slidesEl.style.alignItems = 'center';
   }
 
-  async function populateSlides() {
-    slidesEl.innerHTML = '';
-    const created = [];
-    const base = document.baseURI; // ensure paths resolve relative to the page
-    const promises = IMAGES.map(name => {
-      const url = new URL('./images/' + name, base).href;
-      return createSlideForSrc(url, name)
-        .then(slide => { created.push(slide); })
-        .catch(err => {
-          // missing or failed image: keep note and remove failed slide element
-          console.warn('Failed to load image:', err.src);
-          if (err.slide && err.slide.parentNode) err.slide.parentNode.removeChild(err.slide);
-        });
-    });
-
-    await Promise.all(promises);
-
-    // fallback if nothing loaded
-    if (created.length === 0) {
-      try {
-        const fallbackUrl = new URL('./images/night_sky_img.jpg', base).href;
-        await createSlideForSrc(fallbackUrl, 'fallback');
-      } catch (_) {
-        // nothing to show
-      }
+  async function loadConfigAndInit(){
+    try{
+      const resp = await fetch('./carousel-config.json', {cache:'no-store'});
+      if (!resp.ok) throw new Error('Failed to fetch config');
+      const cfg = await resp.json();
+      if (!Array.isArray(cfg) || cfg.length === 0) throw new Error('Empty config');
+      ITEMS = cfg;
+    }catch(err){
+      console.error('Could not load carousel config:', err);
+      ITEMS = []; // keep empty — populateSlides will do nothing
     }
-
-    // after images are added, compute heights and widths
-    computeAndSetCarouselHeight();
-    updateSlideWidths();
-    createDots();
-
-    // if some images load a bit later, recompute a short time later
-    setTimeout(() => { computeAndSetCarouselHeight(); updateSlideWidths(); }, 150);
-
-    // ensure any late-loading images trigger re-computation
-    getSlides().forEach(slide => {
-      const img = slide.querySelector('img');
-      if (!img) return;
-      if (!img.complete) {
-        img.addEventListener('load', () => {
-          computeAndSetCarouselHeight();
-          updateSlideWidths();
-        }, {once:true});
-      }
-    });
+    await populateSlides();
   }
 
+  // update slide widths to match carousel width
   function updateSlideWidths() {
-    const w = carousel.clientWidth || carousel.getBoundingClientRect().width;
-    getSlides().forEach(slide => {
-      slide.style.width = w + 'px';
-    });
-    slidesEl.style.transition = 'transform .6s cubic-bezier(.2,.9,.2,1)';
-    moveTo(current, false);
-  }
-
-  function moveTo(index, animate = true) {
     const slides = getSlides();
     if (!slides.length) return;
-    current = Math.max(0, Math.min(index, slides.length -1));
     const w = carousel.clientWidth || carousel.getBoundingClientRect().width;
-    if (!animate) slidesEl.style.transition = 'none';
+    slides.forEach(slide => {
+      slide.style.width = w + 'px';
+    });
+    // update transform to maintain current position
     slidesEl.style.transform = `translateX(-${current * w}px)`;
-    requestAnimationFrame(()=> { if (!animate) slidesEl.style.transition = ''; });
-    updateDots();
   }
 
-  function prev() { moveTo(current - 1); }
-  function next() { moveTo(current + 1); }
-
-  function createDots() {
-    if (!dotsContainer) return;
-    dotsContainer.innerHTML = '';
-    const slides = getSlides();
-    slides.forEach((_, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'dot';
-      btn.setAttribute('aria-label', `Slide ${i+1}`);
-      btn.addEventListener('click', () => moveTo(i));
-      dotsContainer.appendChild(btn);
-    });
-    updateDots();
+  function init(){
+    initControls();
+    loadConfigAndInit();
   }
 
-  function updateDots() {
-    if (!dotsContainer) return;
-    Array.from(dotsContainer.children).forEach((d, i) => {
-      d.classList.toggle('active', i === current);
-    });
-  }
-
-  let resizeTimer = null;
-  function onResize() {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
+  // new: refresh all UI pieces (sizes, title, caption, dots) — used on full page load
+  function refreshAll(){
+    if (!Array.isArray(ITEMS) || ITEMS.length === 0) {
+      loadConfigAndInit().catch(()=>{/* ignore */});
+      return;
+    }
+    try {
       computeAndSetCarouselHeight();
       updateSlideWidths();
-    }, 120);
+      // ensure dots are created if missing
+      if (dotsContainer && dotsContainer.children.length === 0) createDots();
+      updateDots();
+      updateTitle(current);
+      updateCaption(current);
+    } catch (err) {
+      console.warn('refreshAll failed:', err);
+    }
   }
 
-  function initControls() {
-    if (prevBtn) prevBtn.addEventListener('click', prev);
-    if (nextBtn) nextBtn.addEventListener('click', next);
-    window.addEventListener('resize', onResize);
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowLeft') prev();
-      if (e.key === 'ArrowRight') next();
-    });
-  }
-
-  function init() {
-    initControls();
-    populateSlides();
-  }
-
-  if (document.readyState === 'loading') {
+  // run init when DOM ready
+  if (document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
+
+  // new: ensure everything is updated once all page resources (images/CSS) have loaded
+  window.addEventListener('load', refreshAll);
+
 })();

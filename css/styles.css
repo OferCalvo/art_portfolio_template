@@ -38,4 +38,29 @@ p.lead{margin:0;color:var(--muted)}
 .dot{width:10px;height:10px;background:rgba(255,255,255,0.12);border-radius:50%;cursor:pointer;border:none}
 .dot.active{background:linear-gradient(90deg,#7dd3fc,#0ea5e9);box-shadow:0 6px 14px rgba(14,165,233,0.14)}
 
+.slide-title{
+  text-align:center;
+  font-weight:700;
+  font-size:clamp(16px,2.4vw,20px);
+  margin:10px 0 6px 0;
+  color:#e6f7ff;
+  letter-spacing:0.2px;
+}
+
+/* ticket / modern description */
+.ticket{
+  margin-top:14px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:10px;
+  padding:12px 14px;
+  color:#dbeafe;
+  box-shadow:0 8px 20px rgba(0,0,0,0.5);
+  border-left:4px solid rgba(14,165,233,0.9);
+  font-size:14px;
+  line-height:1.4;
+}
+.ticket .title{font-weight:600;font-size:15px;margin:0 0 6px 0}
+.ticket .body{color:#e6f2ff;font-size:14px;margin:0}
+.ticket .meta{color:var(--muted);font-size:12px;margin-top:8px}
+
 @media (max-width:640px){ .slide img{max-height:42vh} .container{padding:18px} }
