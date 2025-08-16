@@ -1,18 +1,33 @@
-:root{--glass: rgba(255,255,255,0.06);--muted:#9fb5d9}
+:root{--glass: rgba(0,0,0,0.45);--muted:#8f9aa6}
 html,body{height:100%;box-sizing:border-box}
 body{font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial; margin:0; background:
-  linear-gradient(180deg, rgba(7,16,40,0.36), rgba(2,8,23,0.36)),
-  url('images/night_sky_img.jpg') center/cover no-repeat fixed; color:#e7f3ff; display:flex; align-items:center; justify-content:center; padding:36px}
-.container{width:100%;max-width:1000px;/* subtle glass so background shows through */background:rgba(255,255,255,0.02); border-radius:14px; padding:28px; box-shadow:0 12px 40px rgba(2,8,23,0.45); backdrop-filter:blur(4px)}
+  linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.72)),
+  url('../images/night_sky_img.jpg') center/cover no-repeat fixed; color:#e7f3ff; display:flex; align-items:center; justify-content:center; padding:36px}
+.container{width:100%;max-width:1000px;/* use darker glass so theme reads as black */background:rgba(0,0,0,0.48); border-radius:14px; padding:28px; box-shadow:0 12px 40px rgba(0,0,0,0.6); backdrop-filter:blur(4px)}
 .header{display:flex;flex-direction:column;align-items:center;text-align:center}
 h1{font-size:clamp(24px,4vw,40px);margin:0 0 6px 0; letter-spacing:0.6px}
 p.lead{margin:0;color:var(--muted)}
 
 /* Carousel */
-.carousel{position:relative;margin-top:20px;border-radius:12px;overflow:hidden;/* make mostly transparent so page background is visible */background:linear-gradient(180deg, rgba(2,6,23,0.08), rgba(2,8,35,0.08));backdrop-filter:blur(6px)}
+.carousel{position:relative;margin-top:20px;border-radius:12px;overflow:hidden;/* darker black tint for carousel */background:linear-gradient(180deg, rgba(0,0,0,0.28), rgba(0,0,0,0.28));backdrop-filter:blur(6px)}
 .slides{display:flex;transition:transform .6s cubic-bezier(.2,.9,.2,1);will-change:transform}
 .slide{min-width:100%;display:flex;align-items:center;justify-content:center;padding:20px}
-.slide img{max-width:100%;max-height:64vh;object-fit:contain;border-radius:8px;box-shadow:0 10px 30px rgba(2,8,23,0.6)}
+.slide img{
+  /* keep intrinsic aspect ratio, limit by viewport and container,
+     centered by the slide's flexbox layout */
+  width: auto;
+  height: auto;
+  max-width: calc(100% - 40px); /* leave padding room */
+  max-height: 64vh;
+  object-fit: contain;
+  border-radius:8px;
+  box-shadow:0 10px 30px rgba(2,8,23,0.6);
+  display:block;
+  margin:auto;
+  /* allow smooth size adjustments when viewport changes */
+  transition: max-width .18s ease, max-height .18s ease;
+  align-items: center;
+}
 
 .btn{position:absolute;top:50%;transform:translateY(-50%);background:var(--glass);border:none;color:#fff;padding:10px 12px;border-radius:10px;cursor:pointer;backdrop-filter:blur(6px);font-size:18px}
 .btn:hover{transform:translateY(-50%) scale(1.03)}
