@@ -164,6 +164,107 @@
     }, 120);
   }
 
+  // Touch handling for swipe gestures
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchEndX = 0;
+  let isDragging = false;
+  let isScrolling = false;
+  let startTime = 0;
+  const SWIPE_THRESHOLD = 50; // Minimum distance for a swipe
+  const SWIPE_TIME_THRESHOLD = 500; // Maximum time for a swipe (ms)
+  const SCROLL_TOLERANCE = 10; // Vertical scroll tolerance before canceling swipe
+
+  function handleTouchStart(e) {
+    if (e.touches.length !== 1) return; // Ignore multi-touch
+    
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    startTime = Date.now();
+    isDragging = true;
+    isScrolling = false;
+
+    // Get current transform value
+    const style = window.getComputedStyle(slidesEl);
+    const matrix = new WebKitCSSMatrix(style.transform);
+    currentTransform = matrix.m41;
+    
+    // Disable transition during drag
+    slidesEl.style.transition = 'none';
+  }
+
+  function handleTouchMove(e) {
+    if (!isDragging || isScrolling) return;
+
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - touchStartX;
+    const deltaY = touch.clientY - touchStartY;
+
+    // Check if scrolling vertically
+    if (!isScrolling && Math.abs(deltaY) > SCROLL_TOLERANCE && Math.abs(deltaY) > Math.abs(deltaX)) {
+      isScrolling = true;
+      isDragging = false;
+      return;
+    }
+
+    // If clearly horizontal movement, prevent default to enable swipe
+    if (Math.abs(deltaX) > SCROLL_TOLERANCE && Math.abs(deltaX) > Math.abs(deltaY)) {
+      e.preventDefault();
+    }
+
+    if (!isScrolling) {
+      const w = carousel.clientWidth;
+      const maxScroll = -(getSlides().length - 1) * w;
+      
+      // Calculate new position with resistance at edges
+      let newTransform = currentTransform + deltaX;
+      if (newTransform > 0) {
+        newTransform = newTransform * 0.3; // Add resistance at start
+      } else if (newTransform < maxScroll) {
+        newTransform = maxScroll + (newTransform - maxScroll) * 0.3; // Add resistance at end
+      }
+      
+      slidesEl.style.transform = `translateX(${newTransform}px)`;
+    }
+  }
+
+  function handleTouchEnd(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    
+    // Re-enable transition
+    slidesEl.style.transition = '';
+    
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - touchStartX;
+    const deltaTime = Date.now() - startTime;
+
+    // Determine if swipe was valid
+    const isValidSwipe = Math.abs(deltaX) > SWIPE_THRESHOLD && 
+                        deltaTime < SWIPE_TIME_THRESHOLD &&
+                        !isScrolling;
+
+    if (isValidSwipe) {
+      if (deltaX > 0) {
+        prev(); // Swipe right -> previous slide
+      } else {
+        next(); // Swipe left -> next slide
+      }
+    } else {
+      // Snap back to nearest slide
+      moveTo(current);
+    }
+  }
+
+  function handleTouchCancel() {
+    if (!isDragging) return;
+    isDragging = false;
+    isScrolling = false;
+    slidesEl.style.transition = '';
+    moveTo(current); // Snap back to current slide
+  }
+
   function initControls() {
     if (prevBtn) prevBtn.addEventListener('click', prev);
     if (nextBtn) nextBtn.addEventListener('click', next);
@@ -172,6 +273,15 @@
       if (e.key === 'ArrowLeft') prev();
       if (e.key === 'ArrowRight') next();
     });
+
+    // Add touch event listeners
+    slidesEl.addEventListener('touchstart', handleTouchStart, { passive: false });
+    slidesEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+    slidesEl.addEventListener('touchend', (e) => {
+      touchEndX = e.changedTouches[0].clientX;
+      handleTouchEnd(e);
+    });
+    slidesEl.addEventListener('touchcancel', handleTouchCancel);
   }
 
   // compute a target carousel height so images are centered and maintain aspect ratio
