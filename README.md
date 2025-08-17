@@ -28,5 +28,8 @@ To customize your portfolio:
    Feel free to modify any CSS or JavaScript files to suit your design preferences.
 
 ---
+---
 Created by: Calvo Ofer
-Licence: 
+
+This project is licensed under the [Creative Commons Zero v1.0 Universal license.](/LICENSE)
+
